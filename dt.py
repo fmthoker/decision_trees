@@ -160,7 +160,8 @@ class DecisionTree:
             Attr=IGA.index(maxIG)
             print 'Attr is ',Attr
             thresh=thresholds[Attr]
-            dot.node(self.genes[Attr], str(thresholds[Attr]))
+            node_data = '\nsamples=%s,\nHealthy=%s,  Trisomic=%s'%(data.shape[0],rows.shape[0],rows2.shape[0])
+            dot.node((self.genes[Attr]), label = self.genes[Attr]+'\n<='+(str(thresh))+node_data)
             #self.usedThresholds[Attr].add(thresh)
             self.already_used_attributes.append(Attr)
             self.Tree[nodeNum]=Attr
@@ -178,10 +179,10 @@ class DecisionTree:
             print '\n\n'
             res1 = self.contructTree(dataLeft,2*nodeNum,labelsLeft)
 	    if res1 != None :
-		dot.edge(self.genes[Attr],res1)
+		dot.edge(self.genes[Attr],res1,label='False')
             res2 = self.contructTree(dataRight,2*nodeNum+1,labelsRight)
 	    if res2 != None :
-		dot.edge(self.genes[Attr],res2)
+		dot.edge(self.genes[Attr],res2,label='True')
 	    return self.genes[Attr]
 
             
