@@ -17,8 +17,8 @@ class DecisionTree:
             #self.usedThresholds[i]=set()
         self.Tree=np.ones((10000,1))
         self.Thresholds=np.ones((10000,1))
-        self.decisions={}
-        self.Tree=-1*self.Tree
+        self.decisions={} 
+	self.Tree=-1*self.Tree
         self.last=0
         pass
     
@@ -32,14 +32,17 @@ class DecisionTree:
         #Calculate parent threshold 
         rowsH=np.where(labels==1)[0]
         rowsC=np.where(labels==0)[0]
-        pH=float(rowsH.shape[0])/labels.shape[0]
-        pC=float(rowsC.shape[0])/labels.shape[0]
-        
-        if pH==0 or pC==0:
+        if(labels.shape[0] ==0):
             HX=0
-        else:
-            HX=-1*pH*np.log2(pH) - pC*np.log2(pC)
-        
+	else:
+		pH=float(rowsH.shape[0])/labels.shape[0]
+        	pC=float(rowsC.shape[0])/labels.shape[0]
+        	
+        	if pH==0 or pC==0:
+        	    HX=0
+        	else:
+        	    HX=-1*pH*np.log2(pH) - pC*np.log2(pC)
+        	
         #now calculate the H(Y|X)
         #print 'in IG labels.shape is ',labels.shape
         
@@ -52,13 +55,16 @@ class DecisionTree:
         rowsH=np.where(labelsLeft==1)[0]
         rowsC=np.where(labelsLeft==0)[0]
         
-        pHL=float(rowsH.shape[0])/labelsLeft.shape[0]
-        pCL=float(rowsC.shape[0])/labelsLeft.shape[0]
-        if pHL==0 or pCL==0:
+        if(labelsLeft.shape[0] ==0 ):
             HY_X_L=0
-        else:
-            HY_X_L=-1*pHL*np.log2(pHL) - pCL*np.log2(pCL)
-            HY_X_L=HY_X_L*float(rowsLeft.shape[0])/data.shape[0]
+	else:
+        	pHL=float(rowsH.shape[0])/labelsLeft.shape[0]
+        	pCL=float(rowsC.shape[0])/labelsLeft.shape[0]
+        	if pHL==0 or pCL==0:
+        	    HY_X_L=0
+        	else:
+        	    HY_X_L=-1*pHL*np.log2(pHL) - pCL*np.log2(pCL)
+        	    HY_X_L=HY_X_L*float(rowsLeft.shape[0])/data.shape[0]
         
         
         #For Right Child
@@ -66,14 +72,17 @@ class DecisionTree:
         rowsC=np.where(labelsRight==0)[0]
         
         #print 'labelsRight.shape[0] is ',labelsRight.shape[0]
-        pHR=float(rowsH.shape[0])/labelsRight.shape[0]
-        pCR=float(rowsC.shape[0])/labelsRight.shape[0]
-        
-        if pHR==0 or pCR==0:
+        if(labelsRight.shape[0] ==0 ):
             HY_X_R=0
-        else:
-            HY_X_R=-1*pHR*np.log2(pHR) - pCR*np.log2(pCR)
-            HY_X_R=HY_X_R*float(rowsRight.shape[0])/data.shape[0]
+        
+	else:
+        	pHR=float(rowsH.shape[0])/labelsRight.shape[0]
+        	pCR=float(rowsC.shape[0])/labelsRight.shape[0]
+        	if pHR==0 or pCR==0:
+        	    HY_X_R=0
+        	else:
+        	    HY_X_R=-1*pHR*np.log2(pHR) - pCR*np.log2(pCR)
+        	    HY_X_R=HY_X_R*float(rowsRight.shape[0])/data.shape[0]
         
         IG=HX-HY_X_L-HY_X_R
         return IG        
@@ -85,6 +94,7 @@ class DecisionTree:
         data=copy(data1)
         labels=copy(labels1)
         values=data[:,Attr]
+	classes= copy(labels1)
         values=list(values)
 	classes= list(classes)
 	values = values,classes
@@ -92,9 +102,8 @@ class DecisionTree:
 	values=values.transpose()
 	values = values[values[:,0].argsort()]
 	values=values.transpose()
-	print values
         toTryThreshholds=[]
-        for i in range(0,len(values[0])-2):
+        for i in range(0,len(values[0])-1):
 	   if(values[1][i] != values[1][i+1]):
            	toTryThreshholds.append((values[0][i]+values[0][i+1])/2)
         #toTryThreshholds=set(toTryThreshholds)
@@ -108,7 +117,7 @@ class DecisionTree:
         #toTryThreshholds=copy(sorted(toTryThreshholds))
         IG=[]
         
-        
+       
         for threshold in toTryThreshholds:
             IG.append(self.findIG(data,threshold,Attr,labels))
         
@@ -131,6 +140,7 @@ class DecisionTree:
             print 'number of healthy in this node is ',rows.shape[0]
             print 'number of colic in this node is ',rows2.shape[0]
             if rows.shape[0]==0 or rows2.shape[0]==0:
+		print "Returning at rows 0"
                 self.decisions[nodeNum]=(rows.shape[0],rows2.shape[0])
                 return
             
@@ -237,6 +247,9 @@ class DecisionTree:
 	print "\n \n"
         
         f=open(sys.argv[2])
+	line=f.readline()
+        line=line.rstrip()   
+        classes=line.split(',')
         
         for line in f:
            
