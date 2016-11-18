@@ -12,8 +12,8 @@ class DecisionTree:
         self.genes=[]
         self.Test=np.array([])
         self.already_used_attributes=[]
-        self.Tree=np.ones((10000,1))
-        self.Thresholds=np.ones((10000,1))
+        self.Tree=np.ones((1000000,1))
+        self.Thresholds=np.ones((1000000,1))
         self.decisions={} 
 	self.Tree=-1*self.Tree
         self.last=0
@@ -120,11 +120,13 @@ class DecisionTree:
             print 'nodeNum is ',nodeNum
             data=copy(data1)
             labels=copy(labels1)
-            rows=np.where(labels==1)[0]
+            rows=np.where(labels==1)[0] # separate the rows with healthy and trisomic
             rows2=np.where(labels==0)[0]
             print 'number of healthy in this node is ',rows.shape[0]
             print 'number of Trisomic in this node is ',rows2.shape[0]
-            if rows.shape[0]==0 or rows2.shape[0]==0:
+
+            # if leaf node create a decision dictonary and a graphviz leafnode
+            if rows.shape[0]==0 or rows2.shape[0]==0:  
 		print "Returning at rows 0"
                 self.decisions[nodeNum]=(rows.shape[0],rows2.shape[0])
 		if(rows.shape[0] == 0):
@@ -135,9 +137,11 @@ class DecisionTree:
             	       node_data = '\nsamples=%s,\nHealthy=%s,  Trisomic=%s \n class = Healthy'%(data.shape[0],rows.shape[0],rows2.shape[0])
                        dot.node("leaf"+str(nodeNum), label = node_data)
                        return 'leaf'+str(nodeNum)
-            
+
+           #if interneal node 
             IGA=[]
-            thresholds=[]
+            thresholds=[] 
+	   # check the  information gain of all the unused attributes
 	    for attr in range(0,len(data[0])):
 		if(attr not in self.already_used_attributes):
 			thresh,IG=self.findThresholdAndIG(data,attr,labels)
@@ -147,11 +151,12 @@ class DecisionTree:
 			IGA.append(0)
 			thresholds.append(0)
 			
-                
+            #select one with the maximum information gain 
             maxIG=max(IGA)
             Attr=IGA.index(maxIG)
             print 'Attr is ',Attr
             thresh=thresholds[Attr]
+            #create the graphviz internal node
             node_data = '\nsamples=%s,\nHealthy=%s,  Trisomic=%s'%(data.shape[0],rows.shape[0],rows2.shape[0])
 	    if(rows.shape[0] > rows2.shape[0]):
 		node_data = node_data+"\nClass = Healthy"
@@ -170,10 +175,11 @@ class DecisionTree:
             labelsLeft=copy(labels[rows])
             labelsRight=copy(labels[rows2])
             print '\n\n'
+            # call recursive constuciton of the tree
             res1 = self.contructTree(dataLeft,2*nodeNum,labelsLeft)
-	    dot.edge(self.genes[Attr],res1,label='False')
+	    dot.edge(self.genes[Attr],res1,label='False')             # create an edge between parent and leftchild
             res2 = self.contructTree(dataRight,2*nodeNum+1,labelsRight)
-	    dot.edge(self.genes[Attr],res2,label='True')
+	    dot.edge(self.genes[Attr],res2,label='True')              # create an edge between parent and leftchild
 	    return self.genes[Attr]
 
             
@@ -185,17 +191,16 @@ class DecisionTree:
     
     def loadTrain(self):
         
-        f=open(sys.argv[1])
+        f=open(sys.argv[1]) 
 	line=f.readline()
         line=line.rstrip()   
-        self.genes=line.split(',')
+        self.genes=line.split(',') #get the gene names separately
         
-        for line in f:
+        for line in f:        #Read input data as rows
            
             self.AllValues={}
             
             line=line.rstrip()   
-#            line=line[0:len(line)-1]
             attrs=line.split(',')
             #print ' before attrs is ',attrs
             attr2=[float(i) for i in attrs[0:len(attrs)-1]]
@@ -227,7 +232,7 @@ class DecisionTree:
             print self.Thresholds[i],' '
         print 'self.decisions is ',self.decisions
         
-        
+        #check results for whole test data 
         self.test(self.train,self.labels)
     
     def loadTest(self):
@@ -303,6 +308,7 @@ class DecisionTree:
         data=copy(data1)
         labels=copy(labels1)
         predicted=[]
+        # Test for each row and predict
         for i in range(0,data.shape[0]):
             
             res=self.findLabel(data[i],1)
@@ -323,7 +329,9 @@ if(len(sys.argv)!=3):
 else:
 	
 	ob1=DecisionTree()
+	#load training data
 	ob1.loadTrain()
+	#load testing data
 	ob1.loadTest()
 
 a = open ("output.dot",'w')
