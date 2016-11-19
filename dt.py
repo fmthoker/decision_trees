@@ -11,10 +11,7 @@ class DecisionTree:
         self.labelsT=[]
         self.genes=[]
         self.Test=np.array([])
-        #self.usedThresholds={}
         self.already_used_attributes=[]
-        #for i in range(0,16):
-            #self.usedThresholds[i]=set()
         self.Tree=np.ones((10000,1))
         self.Thresholds=np.ones((10000,1))
         self.decisions={} 
@@ -49,8 +46,6 @@ class DecisionTree:
         
         labelsLeft=copy(labels[rowsLeft])
         labelsRight=copy(labels[rowsRight])
-        #print 'in IG labelsLeft.shape is ',labelsLeft.shape
-        #print 'in IG labelsRight.shape is ',labelsRight.shape
         #For Left Child
         rowsH=np.where(labelsLeft==1)[0]
         rowsC=np.where(labelsLeft==0)[0]
@@ -106,18 +101,8 @@ class DecisionTree:
         for i in range(0,len(values[0])-1):
 	   if(values[1][i] != values[1][i+1]):
            	toTryThreshholds.append((values[0][i]+values[0][i+1])/2)
-        #toTryThreshholds=set(toTryThreshholds)
-        #print 'toTryThreshholds is ',toTryThreshholds
-#        if Attr in self.usedThresholds:
-#            for used in self.usedThresholds[Attr]:
-#                if used in toTryThreshholds:
-#                    toTryThreshholds.remove(used)
-        
-        #now we have all the thresholds that we need to try
-        #toTryThreshholds=copy(sorted(toTryThreshholds))
+
         IG=[]
-        
-       
         for threshold in toTryThreshholds:
             IG.append(self.findIG(data,threshold,Attr,labels))
         
@@ -138,11 +123,18 @@ class DecisionTree:
             rows=np.where(labels==1)[0]
             rows2=np.where(labels==0)[0]
             print 'number of healthy in this node is ',rows.shape[0]
-            print 'number of colic in this node is ',rows2.shape[0]
+            print 'number of Trisomic in this node is ',rows2.shape[0]
             if rows.shape[0]==0 or rows2.shape[0]==0:
 		print "Returning at rows 0"
                 self.decisions[nodeNum]=(rows.shape[0],rows2.shape[0])
-                return
+		if(rows.shape[0] == 0):
+            	       node_data = '\nsamples=%s,\nHealthy=%s,  Trisomic=%s \n class = Trisomic'%(data.shape[0],rows.shape[0],rows2.shape[0])
+                       dot.node("leaf"+str(nodeNum), label = node_data)
+                       return 'leaf'+str(nodeNum)
+		else:
+            	       node_data = '\nsamples=%s,\nHealthy=%s,  Trisomic=%s \n class = Healthy'%(data.shape[0],rows.shape[0],rows2.shape[0])
+                       dot.node("leaf"+str(nodeNum), label = node_data)
+                       return 'leaf'+str(nodeNum)
             
             IGA=[]
             thresholds=[]
@@ -161,8 +153,11 @@ class DecisionTree:
             print 'Attr is ',Attr
             thresh=thresholds[Attr]
             node_data = '\nsamples=%s,\nHealthy=%s,  Trisomic=%s'%(data.shape[0],rows.shape[0],rows2.shape[0])
+	    if(rows.shape[0] > rows2.shape[0]):
+		node_data = node_data+"\nClass = Healthy"
+            else:
+		node_data = node_data+"\nClass = Trisomic"
             dot.node((self.genes[Attr]), label = self.genes[Attr]+'\n<='+(str(thresh))+node_data)
-            #self.usedThresholds[Attr].add(thresh)
             self.already_used_attributes.append(Attr)
             self.Tree[nodeNum]=Attr
             self.Thresholds[nodeNum]=thresh
@@ -171,18 +166,14 @@ class DecisionTree:
             
             dataLeft=copy(data[rows])
             dataRight=copy(data[rows2])
-            #if rows.shape[0]==0 or rows2.shape[0]==0:
-                #return
             
             labelsLeft=copy(labels[rows])
             labelsRight=copy(labels[rows2])
             print '\n\n'
             res1 = self.contructTree(dataLeft,2*nodeNum,labelsLeft)
-	    if res1 != None :
-		dot.edge(self.genes[Attr],res1,label='False')
+	    dot.edge(self.genes[Attr],res1,label='False')
             res2 = self.contructTree(dataRight,2*nodeNum+1,labelsRight)
-	    if res2 != None :
-		dot.edge(self.genes[Attr],res2,label='True')
+	    dot.edge(self.genes[Attr],res2,label='True')
 	    return self.genes[Attr]
 
             
@@ -214,8 +205,6 @@ class DecisionTree:
             
             attrs=copy(np.asarray(attr2))
             attrs=attrs.reshape(1,len(attrs))
-            #print 'attrs is ',attrs
-            #print 'self.train.shape[0] is ',self.train.shape[0]
             if self.train.shape[0]==0:
                 self.train=copy(attrs)
             else:
@@ -223,8 +212,6 @@ class DecisionTree:
                 
         self.labels=copy(np.asarray(self.labels))
         self.labels=copy(self.labels.reshape(-1,1))
-        #print 'train is ',self.train
-        #print 'labels are ',self.labels
         print 'train set is ',self.train.shape
         print 'labels set is ',self.labels.shape
         print 'Now calling contructTree'
@@ -263,12 +250,9 @@ class DecisionTree:
             attr2=[float(i) for i in attrs[0:len(attrs)-1]]
             #attr2.append(attrs[-1])
             self.labelsT.append(float(attrs[-1]))
-            #print 'attr2 is ',attr2,' and type is ',type(attr2[0])
             
             attrs=copy(np.asarray(attr2))
             attrs=attrs.reshape(1,len(attr2))
-            #print 'attrs is ',attrs
-            #print 'self.train.shape[0] is ',self.train.shape[0]
             if self.Test.shape[0]==0:
                 self.Test=copy(attrs)
             else:
