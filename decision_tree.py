@@ -1,91 +1,87 @@
 import numpy as np
 import sys
+import random
 from copy import copy
 from graphviz import Digraph
 dot = Digraph(comment='The Round Table')
-class DecisionTree:
+class Binary_Decision_Tree:
     
     def __init__(self):
-        self.train=np.array([])
+        self.training_data=np.array([])
         self.labels=[]
         self.labelsT=[]
         self.genes=[]
-        self.Test=np.array([])
+        self.node_num=0
+        self.test_data=np.array([])
         self.already_used_attributes=[]
-        self.Tree=np.ones((1000000,1))
-        self.Thresholds=np.ones((1000000,1))
+        self.Tree=np.ones((10000,1))
+        self.Thresholds=np.ones((10000,1))
         self.decisions={} 
 	self.Tree=-1*self.Tree
         self.last=0
         pass
     
-    def findIG(self,data1,threshold,Attr,labels1):
+    def calculate_IG(self,data1,threshold,Attr,labels1):
         data=copy(data1)
         labels=copy(labels1)
         
-        rowsLeft=np.where(data[:,Attr]>=threshold)[0]
-        rowsRight=np.where(data[:,Attr]<threshold)[0]
+        Left_rows=np.where(data[:,Attr]>=threshold)[0]
+        Right_rows=np.where(data[:,Attr]<threshold)[0]
         
         #Calculate parent threshold 
-        rowsH=np.where(labels==1)[0]
-        rowsC=np.where(labels==0)[0]
+        Rows_healthy=np.where(labels==1)[0]
+        Rows_trisomy=np.where(labels==0)[0]
         if(labels.shape[0] ==0):
-            HX=0
-	else:
-		pH=float(rowsH.shape[0])/labels.shape[0]
-        	pC=float(rowsC.shape[0])/labels.shape[0]
+            HParent=0
+	else: 
+		pH=float(Rows_healthy.shape[0])/labels.shape[0]
+                pC=float(Rows_trisomy.shape[0])/labels.shape[0]
         	
         	if pH==0 or pC==0:
-        	    HX=0
+        	    HParent=0
         	else:
-        	    HX=-1*pH*np.log2(pH) - pC*np.log2(pC)
-        	
-        #now calculate the H(Y|X)
-        #print 'in IG labels.shape is ',labels.shape
+        	    HParent=-1*pH*np.log2(pH) - pC*np.log2(pC)
         
-        
-        labelsLeft=copy(labels[rowsLeft])
-        labelsRight=copy(labels[rowsRight])
-        #For Left Child
-        rowsH=np.where(labelsLeft==1)[0]
-        rowsC=np.where(labelsLeft==0)[0]
+        labelsLeft=copy(labels[Left_rows])
+        labelsRight=copy(labels[Right_rows])
+        # calculate the threshold For Left Child
+        Rows_healthy=np.where(labelsLeft==1)[0]
+        Rows_trisomy=np.where(labelsLeft==0)[0]
         
         if(labelsLeft.shape[0] ==0 ):
-            HY_X_L=0
+            Hleft_child=0
 	else:
-        	pHL=float(rowsH.shape[0])/labelsLeft.shape[0]
-        	pCL=float(rowsC.shape[0])/labelsLeft.shape[0]
-        	if pHL==0 or pCL==0:
-        	    HY_X_L=0
+        	Prob_HL=float(Rows_healthy.shape[0])/labelsLeft.shape[0]
+        	Prob_TL=float(Rows_trisomy.shape[0])/labelsLeft.shape[0]
+        	if Prob_HL==0 or Prob_TL==0:
+        	    Hleft_child=0
         	else:
-        	    HY_X_L=-1*pHL*np.log2(pHL) - pCL*np.log2(pCL)
-        	    HY_X_L=HY_X_L*float(rowsLeft.shape[0])/data.shape[0]
+        	    Hleft_child=-1*Prob_HL*np.log2(Prob_HL) - Prob_TL*np.log2(Prob_TL)
+        	    Hleft_child=Hleft_child*float(Left_rows.shape[0])/data.shape[0]
         
         
-        #For Right Child
-        rowsH=np.where(labelsRight==1)[0]
-        rowsC=np.where(labelsRight==0)[0]
+        # calculate the threshold For Right Child
+        Rows_healthy=np.where(labelsRight==1)[0]
+        Rows_trisomy=np.where(labelsRight==0)[0]
         
-        #print 'labelsRight.shape[0] is ',labelsRight.shape[0]
         if(labelsRight.shape[0] ==0 ):
-            HY_X_R=0
+            Hright_child=0
         
 	else:
-        	pHR=float(rowsH.shape[0])/labelsRight.shape[0]
-        	pCR=float(rowsC.shape[0])/labelsRight.shape[0]
-        	if pHR==0 or pCR==0:
-        	    HY_X_R=0
+        	Prob_HR=float(Rows_healthy.shape[0])/labelsRight.shape[0]
+        	Prob_TR=float(Rows_trisomy.shape[0])/labelsRight.shape[0]
+        	if Prob_HR==0 or Prob_TR==0:
+        	    Hright_child=0
         	else:
-        	    HY_X_R=-1*pHR*np.log2(pHR) - pCR*np.log2(pCR)
-        	    HY_X_R=HY_X_R*float(rowsRight.shape[0])/data.shape[0]
+        	    Hright_child=-1*Prob_HR*np.log2(Prob_HR) - Prob_TR*np.log2(Prob_TR)
+        	    Hright_child=Hright_child*float(Right_rows.shape[0])/data.shape[0]
         
-        IG=HX-HY_X_L-HY_X_R
+        IG=HParent-Hleft_child-Hright_child
         return IG        
         
         
        
     def findThresholdAndIG(self,data1,Attr,labels1):
-        #print 'trying attribute ',Attr
         data=copy(data1)
         labels=copy(labels1)
         values=data[:,Attr]
@@ -103,18 +99,20 @@ class DecisionTree:
            	toTryThreshholds.append((values[0][i]+values[0][i+1])/2)
 
         IG=[]
+        #calculate the Informatin gain for all thresholds
         for threshold in toTryThreshholds:
-            IG.append(self.findIG(data,threshold,Attr,labels))
+            IG.append(self.calculate_IG(data,threshold,Attr,labels))
         
+        #select one with the maximum infomation gain
         maxIG=max(IG)
-        maxThresh=IG.index(maxIG)
+        Thresh_max=IG.index(maxIG)
         
-        return toTryThreshholds[maxThresh],maxIG
+        return toTryThreshholds[Thresh_max],maxIG
             
         
                                 
         
-    def contructTree(self,data1,nodeNum,labels1):
+    def construct_tree(self,data1,nodeNum,labels1):
             #since its a recursive function we need to have a base case. return when the number of wrong classes is 0. maybe 
             #we can chane it later
             print 'nodeNum is ',nodeNum
@@ -122,12 +120,9 @@ class DecisionTree:
             labels=copy(labels1)
             rows=np.where(labels==1)[0] # separate the rows with healthy and trisomic
             rows2=np.where(labels==0)[0]
-            print 'number of healthy in this node is ',rows.shape[0]
-            print 'number of Trisomic in this node is ',rows2.shape[0]
 
             # if leaf node create a decision dictonary and a graphviz leafnode
-            if rows.shape[0]==0 or rows2.shape[0]==0:  
-		print "Returning at rows 0"
+            if rows.shape[0]==0 or rows2.shape[0]==0 or nodeNum >=32: # Restrict the number of levels to 5
                 self.decisions[nodeNum]=(rows.shape[0],rows2.shape[0])
 		if(rows.shape[0] == 0):
             	       node_data = '\nsamples=%s,\nHealthy=%s,  Trisomic=%s \n class = Trisomic'%(data.shape[0],rows.shape[0],rows2.shape[0])
@@ -154,7 +149,6 @@ class DecisionTree:
             #select one with the maximum information gain 
             maxIG=max(IGA)
             Attr=IGA.index(maxIG)
-            print 'Attr is ',Attr
             thresh=thresholds[Attr]
             #create the graphviz internal node
             node_data = '\nsamples=%s,\nHealthy=%s,  Trisomic=%s'%(data.shape[0],rows.shape[0],rows2.shape[0])
@@ -176,9 +170,9 @@ class DecisionTree:
             labelsRight=copy(labels[rows2])
             print '\n\n'
             # call recursive constuciton of the tree
-            res1 = self.contructTree(dataLeft,2*nodeNum,labelsLeft)
+            res1 = self.construct_tree(dataLeft,2*nodeNum,labelsLeft)
 	    dot.edge(self.genes[Attr],res1,label='False')             # create an edge between parent and leftchild
-            res2 = self.contructTree(dataRight,2*nodeNum+1,labelsRight)
+            res2 = self.construct_tree(dataRight,2*nodeNum+1,labelsRight)
 	    dot.edge(self.genes[Attr],res2,label='True')              # create an edge between parent and leftchild
 	    return self.genes[Attr]
 
@@ -189,103 +183,89 @@ class DecisionTree:
                 
         
     
-    def loadTrain(self):
+    def load_train_data(self):
         
         f=open(sys.argv[1]) 
-	line=f.readline()
-        line=line.rstrip()   
-        self.genes=line.split(',') #get the gene names separately
+	row=f.readline()
+        row=row.rstrip()   
+        self.genes=row.split(',') #get the gene names separately
         
-        for line in f:        #Read input data as rows
+        for row in f:        #Read input data as rows
            
             self.AllValues={}
             
-            line=line.rstrip()   
-            attrs=line.split(',')
-            #print ' before attrs is ',attrs
-            attr2=[float(i) for i in attrs[0:len(attrs)-1]]
-            #attr2.append(attrs[-1])
-            self.labels.append(float(attrs[-1]))
-            #print 'attr2 is ',attr2,' and type is ',type(attr2[0])
+            row=row.rstrip()   
+            attributes=row.split(',')
+            attributes_2=[float(i) for i in attributes[0:len(attributes)-1]]
+            self.labels.append(float(attributes[-1]))
             
-            attrs=copy(np.asarray(attr2))
-            attrs=attrs.reshape(1,len(attrs))
-            if self.train.shape[0]==0:
-                self.train=copy(attrs)
+            attributes=copy(np.asarray(attributes_2))
+            attributes=attributes.reshape(1,len(attributes))
+            if self.training_data.shape[0]==0:
+                self.training_data=copy(attributes)
             else:
-                self.train=copy(np.vstack((self.train,attrs)))
+                self.training_data=copy(np.vstack((self.training_data,attributes)))
                 
         self.labels=copy(np.asarray(self.labels))
         self.labels=copy(self.labels.reshape(-1,1))
-        print 'train set is ',self.train.shape
-        print 'labels set is ',self.labels.shape
-        print 'Now calling contructTree'
         
-        self.contructTree(self.train,1,self.labels)
-        print 'the tree is '
-        for i in range(1,20): 
-            
-            print self.Tree[i],' '
-        print 'the thresholds are '
-        for i in range(1,20): 
-            
-            print self.Thresholds[i],' '
-        print 'self.decisions is ',self.decisions
+		
+
+	print self.labels.shape[0]
+        print 'Constructing the tree'
         
-        #check results for whole test data 
-        self.test(self.train,self.labels)
+        self.construct_tree(self.training_data,1,self.labels)
+        #test the training data
+        self.test(self.training_data,self.labels)
     
-    def loadTest(self):
+    def load_test_data(self):
 	print "Decision tree is",self.decisions
 	print "\n \n"
         
         f=open(sys.argv[2])
-	line=f.readline()
-        line=line.rstrip()   
-        classes=line.split(',')
+	row=f.readline()
+        row=row.rstrip()   
+        classes=row.split(',')
         
-        for line in f:
+        for row in f:
            
 
             
-            line=line.rstrip()   
-            line=line[0:len(line)-1]
-            attrs=line.split(',')
-            #print ' before attrs is ',attrs
-            attr2=[float(i) for i in attrs[0:len(attrs)-1]]
-            #attr2.append(attrs[-1])
-            self.labelsT.append(float(attrs[-1]))
+            row=row.rstrip()   
+            row=row[0:len(row)-1]
+            attributes=row.split(',')
+            attributes_2=[float(i) for i in attributes[0:len(attributes)-1]]
+            self.labelsT.append(float(attributes[-1]))
             
-            attrs=copy(np.asarray(attr2))
-            attrs=attrs.reshape(1,len(attr2))
-            if self.Test.shape[0]==0:
-                self.Test=copy(attrs)
+            attributes=copy(np.asarray(attributes_2))
+            attributes=attributes.reshape(1,len(attributes_2))
+            if self.test_data.shape[0]==0:
+                self.test_data=copy(attributes)
             else:
-                self.Test=copy(np.vstack((self.Test,attrs)))
+                self.test_data=copy(np.vstack((self.test_data,attributes)))
                 
         self.labelsT=copy(np.asarray(self.labelsT))
         self.labelsT=copy(self.labelsT.reshape(-1,1))
-        
-        print '\n\nnow testing the test set \n'
-        self.test(self.Test,self.labelsT)
+	
+           
+        self.test(self.test_data,self.labelsT)
     
     
-    def checkAccuracy(self,gold,predicted):
-        gold=copy(gold.tolist())
-        predicted=copy(predicted.tolist())
+    def calculate_accuracy(self,gold,predicted):
+        output=copy(gold.tolist())
+        predic=copy(predicted.tolist())
         
         correct=0
-        for i in range(0,len(gold)):
-            #print 'gold[i]= ',gold[i],' & predicted[i] =',predicted[i]
-            if gold[i][0]==predicted[i]:
+        for i in range(0,len(output)):
+            if output[i][0]==predic[i]:
                 correct+=1
         
-        return 100*(float(correct)/len(gold))
+        return 100*(float(correct)/len(output))
         
-    def findLabel(self,data1,nodeNum):
+    def find_edge(self,data1,nodeNum):
         data=copy(data1)
         #print 'nodeNum is ',nodeNum
-       # print 'self.Tree[nodeNum is',data[self.Tree[nodeNum][0]]
+	#if the node is a leaf node the we check the decisions dictionary for result
         if self.Tree[nodeNum][0]==-1:
             #then we check the decisions 
 	
@@ -295,44 +275,39 @@ class DecisionTree:
             else:
                 res= 0
 
+	#if the node is an inter node then we travers left or right of tree 
         elif data[self.Tree[nodeNum][0]]>=self.Thresholds[nodeNum][0]:
             #go left
-            res=self.findLabel(data,2*nodeNum)
+            res=self.find_edge(data,2*nodeNum)
         else:
-            res=self.findLabel(data,2*nodeNum+1)
+            #go right
+            res=self.find_edge(data,2*nodeNum+1)
            
-        #print 'returning ',res   
         return res
                     
     def test(self,data1,labels1):
         data=copy(data1)
         labels=copy(labels1)
         predicted=[]
-        # Test for each row and predict
+        # Test for each row and predict output
         for i in range(0,data.shape[0]):
             
-            res=self.findLabel(data[i],1)
+            res=self.find_edge(data[i],1)
             predicted.append(res)
-            print 'Testing the training data \n'
-            print 'testing ',i,' predicted= ',res,' gold is ',labels[i][0]
+            print 'testing ',i,' predicted= ',res,' output is ',labels[i][0]
             
             
         predicted=np.asarray(predicted)
-        acc=self.checkAccuracy(labels,predicted)
-        print 'Accuracy is ',acc,'%'
-                        
-       
-    #def checkValues(self):
+        accuracy=self.calculate_accuracy(labels,predicted)
+        print 'Accuracy is ',accuracy,'%'
         
 if(len(sys.argv)!=3):
 	print "Usage dt.py filename1 filename2"
 else:
 	
-	ob1=DecisionTree()
-	#load training data
-	ob1.loadTrain()
-	#load testing data
-	ob1.loadTest()
+	OBJECT=Binary_Decision_Tree()
+	OBJECT.load_train_data()
+	OBJECT.load_test_data()
 
-a = open ("output.dot",'w')
+a = open ("Genes.dot",'w')
 a.write(dot.source)
